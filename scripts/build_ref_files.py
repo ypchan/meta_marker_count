@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import os
 import re
+import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -65,6 +68,12 @@ NAME_RANK = {
 }
 
 MISSING = "Unclassified"
+DEFAULT_REF_DIR = Path(
+    os.environ.get(
+        "META_MARKER_COUNT_REF_DIR",
+        Path.home() / ".local" / "share" / "meta_marker_count" / "ref",
+    )
+)
 
 
 @dataclass(frozen=True)
@@ -455,6 +464,21 @@ def write_combined_taxonomy(path: Path, records: Iterable[RefTaxonomy], force: b
     return count
 
 
+def build_minimap2_index(fasta: Path, force: bool) -> None:
+    if not fasta.exists() or fasta.stat().st_size == 0:
+        log(f"Skipping minimap2 index for empty FASTA: {fasta}")
+        return
+    index = Path(f"{fasta}.mmi")
+    ensure_can_write(index, force)
+    minimap2 = shutil.which("minimap2")
+    if minimap2 is None:
+        raise SystemExit(
+            "minimap2 not found in PATH. Install dependencies or rerun with --skip-index."
+        )
+    log(f"Building minimap2 index: {index}")
+    subprocess.run([minimap2, "-d", str(index), str(fasta)], check=True)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Generate short-id FASTA and taxonomy TSV files for meta_marker_count.sh."
@@ -465,8 +489,8 @@ def build_parser() -> argparse.ArgumentParser:
         "-o",
         "--outdir",
         type=Path,
-        default=Path("ref"),
-        help="Output directory. Default: ref",
+        default=DEFAULT_REF_DIR,
+        help=f"Output directory. Default: {DEFAULT_REF_DIR}",
     )
     parser.add_argument(
         "--combined-taxonomy",
@@ -482,6 +506,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-combined",
         action="store_true",
         help="Only write per-database FASTA/taxonomy files.",
+    )
+    parser.add_argument(
+        "--skip-index",
+        action="store_true",
+        help="Do not build minimap2 .mmi indexes. By default indexes are built next to FASTA files.",
     )
     parser.add_argument(
         "--keep-organelles",
@@ -509,8 +538,10 @@ def main(argv: list[str] | None = None) -> int:
     combined_taxonomy = args.combined_taxonomy or (args.outdir / "ref_taxonomy.tsv")
     id_registry = IdRegistry()
     all_records: list[RefTaxonomy] = []
+    index_fastas: list[Path] = []
 
     if args.silva:
+        silva_base = strip_fasta_suffix(args.silva)
         all_records.extend(
             process_silva(
                 args.silva,
@@ -520,7 +551,14 @@ def main(argv: list[str] | None = None) -> int:
                 keep_organelles=args.keep_organelles,
             )
         )
+        index_fastas.extend(
+            [
+                args.outdir / f"{silva_base}.dna.arc_bac.shortid.fasta",
+                args.outdir / f"{silva_base}.dna.euk.shortid.fasta",
+            ]
+        )
     if args.unite:
+        unite_base = strip_fasta_suffix(args.unite)
         all_records.extend(
             process_unite(
                 args.unite,
@@ -530,9 +568,14 @@ def main(argv: list[str] | None = None) -> int:
                 force=args.force,
             )
         )
+        index_fastas.append(args.outdir / f"{unite_base}.shortid.fasta")
 
     if not args.skip_combined:
         write_combined_taxonomy(combined_taxonomy, all_records, args.force)
+
+    if not args.skip_index:
+        for fasta in index_fastas:
+            build_minimap2_index(fasta, args.force)
 
     if id_registry.duplicate_count:
         log(f"Duplicate short IDs renamed with numeric suffixes: {id_registry.duplicate_count}")

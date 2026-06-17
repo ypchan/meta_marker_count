@@ -20,6 +20,11 @@ OUTDIR="marker_count_out"
 STEPS="all"
 MARKERS="16S,ITS"
 
+DEFAULT_REF_DIR="${META_MARKER_COUNT_REF_DIR:-${HOME:-.}/.local/share/meta_marker_count/ref}"
+REF_DIR="${DEFAULT_REF_DIR}"
+SILVA_REF_PREFIX="SILVA_138.2_SSURef_tax_silva"
+UNITE_REF_PREFIX="UNITE_public_19.02.2025"
+
 REF_16S=""
 REF_18S=""
 REF_ITS=""
@@ -216,6 +221,17 @@ Default markers
   Default runs 16S + ITS.
   18S is optional and can be added with --markers 16S,18S,ITS.
 
+Default reference paths
+-----------------------
+--ref-dir ${REF_DIR}
+16S FASTA : ${REF_DIR}/${SILVA_REF_PREFIX}.dna.arc_bac.shortid.fasta
+16S index : ${REF_DIR}/${SILVA_REF_PREFIX}.dna.arc_bac.shortid.fasta.mmi
+18S FASTA : ${REF_DIR}/${SILVA_REF_PREFIX}.dna.euk.shortid.fasta
+18S index : ${REF_DIR}/${SILVA_REF_PREFIX}.dna.euk.shortid.fasta.mmi
+ITS FASTA : ${REF_DIR}/${UNITE_REF_PREFIX}.shortid.fasta
+ITS index : ${REF_DIR}/${UNITE_REF_PREFIX}.shortid.fasta.mmi
+taxonomy  : ${REF_DIR}/ref_taxonomy.tsv
+
 BBDuk candidate-read extraction
 -------------------------------
 16S: k=${K_16S}, hdist=${HDIST_16S}, mkh=${MKH_16S}, mink=${MINK_16S}
@@ -285,14 +301,28 @@ ${BOLD}Required arguments - sample input:${RESET}
   ${CYAN}--r1${RESET} FILE                       Single-sample R1 FASTQ(.gz).
   ${CYAN}--r2${RESET} FILE                       Single-sample R2 FASTQ(.gz).
 
-${BOLD}Required arguments - marker references:${RESET}
-  ${CYAN}--ref-16s${RESET} FILE                  16S reference FASTA for BBDuk, required when 16S is selected.
-  ${CYAN}--ref-18s${RESET} FILE                  18S reference FASTA for BBDuk, required when 18S is selected.
-  ${CYAN}--ref-its${RESET} FILE                  ITS reference FASTA for BBDuk, required when ITS is selected.
-  ${CYAN}--index-16s${RESET} FILE                minimap2 index for 16S, required when 16S is selected.
-  ${CYAN}--index-18s${RESET} FILE                minimap2 index for 18S, required when 18S is selected.
-  ${CYAN}--index-its${RESET} FILE                minimap2 index for ITS, required when ITS is selected.
-  ${CYAN}--taxonomy${RESET} FILE                 ref_id/marker/domain/ranks taxonomy TSV for abundance.
+${BOLD}Reference data defaults and overrides:${RESET}
+  Default reference directory:
+    ${REF_DIR}
+  Override directory with ${CYAN}--ref-dir${RESET} DIR or META_MARKER_COUNT_REF_DIR.
+
+  Default files:
+    16S FASTA : ${REF_DIR}/${SILVA_REF_PREFIX}.dna.arc_bac.shortid.fasta
+    16S index : ${REF_DIR}/${SILVA_REF_PREFIX}.dna.arc_bac.shortid.fasta.mmi
+    18S FASTA : ${REF_DIR}/${SILVA_REF_PREFIX}.dna.euk.shortid.fasta
+    18S index : ${REF_DIR}/${SILVA_REF_PREFIX}.dna.euk.shortid.fasta.mmi
+    ITS FASTA : ${REF_DIR}/${UNITE_REF_PREFIX}.shortid.fasta
+    ITS index : ${REF_DIR}/${UNITE_REF_PREFIX}.shortid.fasta.mmi
+    taxonomy  : ${REF_DIR}/ref_taxonomy.tsv
+
+  ${CYAN}--ref-dir${RESET} DIR                   Reference directory. default: ${REF_DIR}
+  ${CYAN}--ref-16s${RESET} FILE                  Override 16S reference FASTA for BBDuk.
+  ${CYAN}--ref-18s${RESET} FILE                  Override 18S reference FASTA for BBDuk.
+  ${CYAN}--ref-its${RESET} FILE                  Override ITS reference FASTA for BBDuk.
+  ${CYAN}--index-16s${RESET} FILE                Override minimap2 index for 16S.
+  ${CYAN}--index-18s${RESET} FILE                Override minimap2 index for 18S.
+  ${CYAN}--index-its${RESET} FILE                Override minimap2 index for ITS.
+  ${CYAN}--taxonomy${RESET} FILE                 Override ref_id/marker/domain/ranks taxonomy TSV.
 
 ${BOLD}Optional arguments - workflow control:${RESET}
   ${CYAN}-o, --outdir${RESET} DIR                Output directory. default: ${OUTDIR}
@@ -353,11 +383,6 @@ ${BOLD}Example:${RESET}
     --input data_path.tsv \\
     --outdir marker_count_out \\
     --markers 16S,ITS \\
-    --ref-16s ref/SILVA_16S.arc_bac.fasta \\
-    --ref-its ref/UNITE_ITS.fungi.fasta \\
-    --index-16s index/SILVA_16S.arc_bac.mmi \\
-    --index-its index/UNITE_ITS.fungi.mmi \\
-    --taxonomy ref_taxonomy.tsv \\
     --jobs 8 \\
     --threads-per-sample 4
 
@@ -451,6 +476,16 @@ should_run_step() {
     [[ "${STEPS}" == "all" || ",${STEPS}," == *",${step},"* ]]
 }
 
+apply_default_reference_paths() {
+    REF_16S="${REF_16S:-${REF_DIR}/${SILVA_REF_PREFIX}.dna.arc_bac.shortid.fasta}"
+    REF_18S="${REF_18S:-${REF_DIR}/${SILVA_REF_PREFIX}.dna.euk.shortid.fasta}"
+    REF_ITS="${REF_ITS:-${REF_DIR}/${UNITE_REF_PREFIX}.shortid.fasta}"
+    INDEX_16S="${INDEX_16S:-${REF_16S}.mmi}"
+    INDEX_18S="${INDEX_18S:-${REF_18S}.mmi}"
+    INDEX_ITS="${INDEX_ITS:-${REF_ITS}.mmi}"
+    TAXONOMY="${TAXONOMY:-${REF_DIR}/ref_taxonomy.tsv}"
+}
+
 parse_args() {
     if [[ "$#" -eq 0 ]]; then
         show_help
@@ -475,6 +510,8 @@ parse_args() {
             --markers) require_value "$1" "${2:-}"; MARKERS="$2"; shift 2 ;;
             --markers=*) MARKERS="${1#*=}"; shift ;;
 
+            --ref-dir) require_value "$1" "${2:-}"; REF_DIR="$2"; shift 2 ;;
+            --ref-dir=*) REF_DIR="${1#*=}"; shift ;;
             --ref-16s) require_value "$1" "${2:-}"; REF_16S="$2"; shift 2 ;;
             --ref-16s=*) REF_16S="${1#*=}"; shift ;;
             --ref-18s) require_value "$1" "${2:-}"; REF_18S="$2"; shift 2 ;;
@@ -639,6 +676,12 @@ init_paths() {
     touch "${MAIN_LOG}"
 }
 
+require_reference_file() {
+    local label="$1" path="$2" option="$3"
+    [[ -s "${path}" ]] && return 0
+    die "Missing ${label}: ${path}. Provide ${option}, use --ref-dir, or prepare default references with: meta_marker_build_refs --silva SILVA_138.2_SSURef_tax_silva.fasta.gz --unite UNITE_public_19.02.2025.fasta.gz"
+}
+
 validate_args() {
     is_positive_int "${JOBS}" || die "--jobs must be a positive integer: ${JOBS}"
     is_positive_int "${THREADS_PER_SAMPLE}" || die "--threads-per-sample must be a positive integer: ${THREADS_PER_SAMPLE}"
@@ -674,21 +717,21 @@ validate_args() {
 
     if should_run_step extract; then
         command -v bbduk.sh >/dev/null 2>&1 || die "bbduk.sh not found in PATH."
-        if list_has_marker 16S; then [[ -s "${REF_16S}" ]] || die "Missing --ref-16s for 16S extraction."; fi
-        if list_has_marker 18S; then [[ -s "${REF_18S}" ]] || die "Missing --ref-18s for 18S extraction."; fi
-        if list_has_marker ITS; then [[ -s "${REF_ITS}" ]] || die "Missing --ref-its for ITS extraction."; fi
+        if list_has_marker 16S; then require_reference_file "16S reference FASTA" "${REF_16S}" "--ref-16s"; fi
+        if list_has_marker 18S; then require_reference_file "18S reference FASTA" "${REF_18S}" "--ref-18s"; fi
+        if list_has_marker ITS; then require_reference_file "ITS reference FASTA" "${REF_ITS}" "--ref-its"; fi
     fi
 
     if should_run_step align; then
         command -v minimap2 >/dev/null 2>&1 || die "minimap2 not found in PATH."
-        if list_has_marker 16S; then [[ -s "${INDEX_16S}" ]] || die "Missing --index-16s for 16S alignment."; fi
-        if list_has_marker 18S; then [[ -s "${INDEX_18S}" ]] || die "Missing --index-18s for 18S alignment."; fi
-        if list_has_marker ITS; then [[ -s "${INDEX_ITS}" ]] || die "Missing --index-its for ITS alignment."; fi
+        if list_has_marker 16S; then require_reference_file "16S minimap2 index" "${INDEX_16S}" "--index-16s"; fi
+        if list_has_marker 18S; then require_reference_file "18S minimap2 index" "${INDEX_18S}" "--index-18s"; fi
+        if list_has_marker ITS; then require_reference_file "ITS minimap2 index" "${INDEX_ITS}" "--index-its"; fi
     fi
 
     if should_run_step abundance; then
         command -v awk >/dev/null 2>&1 || die "awk not found in PATH."
-        [[ -s "${TAXONOMY}" ]] || die "Missing --taxonomy for abundance step."
+        require_reference_file "taxonomy table" "${TAXONOMY}" "--taxonomy"
     fi
 }
 
@@ -812,6 +855,14 @@ ${BOLD}Run plan${RESET}
   seqkit threads     : ${SEQKIT_THREADS}
   resume             : ${RESUME}
   force              : ${FORCE}
+  reference dir      : ${REF_DIR}
+  ref 16S            : ${REF_16S}
+  ref 18S            : ${REF_18S}
+  ref ITS            : ${REF_ITS}
+  index 16S          : ${INDEX_16S}
+  index 18S          : ${INDEX_18S}
+  index ITS          : ${INDEX_ITS}
+  taxonomy           : ${TAXONOMY}
   reads count table  : ${CLEAN_OUT}
   marker read dir    : ${MARKER_DIR}
   alignment dir      : ${ALIGN_DIR}
@@ -1510,6 +1561,7 @@ write_run_config() {
         printf 'threads_per_sample\t%s\n' "${THREADS_PER_SAMPLE}"
         printf 'seqkit_threads\t%s\n' "${SEQKIT_THREADS}"
         printf 'bbmap_mem\t%s\n' "${BBMAP_MEM}"
+        printf 'ref_dir\t%s\n' "${REF_DIR}"
         printf 'ref_16s\t%s\n' "${REF_16S}"
         printf 'ref_18s\t%s\n' "${REF_18S}"
         printf 'ref_its\t%s\n' "${REF_ITS}"
@@ -1536,6 +1588,7 @@ main() {
     parse_args "$@"
     STEPS="$(normalize_steps "${STEPS}")"
     MARKERS="$(normalize_markers "${MARKERS}")"
+    apply_default_reference_paths
     init_paths
     check_dependencies
     if [[ "${CHECK_DEPS_ONLY}" -eq 1 ]]; then
@@ -1561,4 +1614,3 @@ main() {
 }
 
 main "$@"
-
