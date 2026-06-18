@@ -9,13 +9,10 @@ The default marker set is `16S,ITS`. Add 18S explicitly with `--markers 16S,18S,
 Clone the repository and install the command wrappers:
 
 ```bash
-git clone <repo-url>
+gh repo clone ypchan/meta_marker_count
 cd meta_marker_count
 
-mamba env create -f environment.yml
-mamba activate meta-marker-count
-
-make install PREFIX="$HOME/.local"
+make install PREFIX="./install"
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
@@ -37,13 +34,13 @@ make install PREFIX="$HOME/.local"
 The software has built-in reference paths. By default, reference files are stored in:
 
 ```text
-~/.local/share/meta_marker_count/ref
+<install>/ref
 ```
 
 Override this directory with either:
 
 ```bash
-export META_MARKER_COUNT_REF_DIR=/path/to/meta_marker_count_ref
+export META_MARKER_COUNT_REF_DIR=<install>/ref
 ```
 
 or at runtime:
@@ -57,13 +54,13 @@ After references are built in the default directory, normal pipeline runs do not
 Default files expected by `meta_marker_count`:
 
 ```text
-~/.local/share/meta_marker_count/ref/SILVA_138.2_SSURef_tax_silva.dna.arc_bac.shortid.fasta
-~/.local/share/meta_marker_count/ref/SILVA_138.2_SSURef_tax_silva.dna.arc_bac.shortid.fasta.mmi
-~/.local/share/meta_marker_count/ref/SILVA_138.2_SSURef_tax_silva.dna.euk.shortid.fasta
-~/.local/share/meta_marker_count/ref/SILVA_138.2_SSURef_tax_silva.dna.euk.shortid.fasta.mmi
-~/.local/share/meta_marker_count/ref/UNITE_public_19.02.2025.shortid.fasta
-~/.local/share/meta_marker_count/ref/UNITE_public_19.02.2025.shortid.fasta.mmi
-~/.local/share/meta_marker_count/ref/ref_taxonomy.tsv
+<install>/ref/SILVA_138.2_SSURef_tax_silva.dna.arc_bac.shortid.fasta
+<install>/ref/SILVA_138.2_SSURef_tax_silva.dna.arc_bac.shortid.fasta.mmi
+<install>/ref/SILVA_138.2_SSURef_tax_silva.dna.euk.shortid.fasta
+<install>/ref/SILVA_138.2_SSURef_tax_silva.dna.euk.shortid.fasta.mmi
+<install>/ref/UNITE_public_19.02.2025.shortid.fasta
+<install>/ref/UNITE_public_19.02.2025.shortid.fasta.mmi
+<install>/ref/ref_taxonomy.tsv
 ```
 
 `meta_marker_count --help` also prints these default paths.
@@ -101,7 +98,7 @@ meta_marker_build_refs \
   --force
 ```
 
-By default this writes to `~/.local/share/meta_marker_count/ref` and builds `.mmi` indexes next to the generated FASTA files. The main pipeline will automatically use these paths.
+By default this writes to `<install>/ref` and builds `.mmi` indexes next to the generated FASTA files. The main pipeline will automatically use these paths.
 
 If minimap2 indexes should be created later, use:
 
