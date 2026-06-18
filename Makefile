@@ -1,4 +1,4 @@
-PREFIX ?= $(HOME)/.local
+PREFIX ?= $(PWD)/install
 BINDIR ?= $(PREFIX)/bin
 
 .PHONY: install uninstall check

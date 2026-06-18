@@ -54,10 +54,10 @@ After references are built in the default directory, normal pipeline runs do not
 Default files expected by `meta_marker_count`:
 
 ```text
-<install>/ref/SILVA_138.2_SSURef_tax_silva.dna.arc_bac.shortid.fasta
-<install>/ref/SILVA_138.2_SSURef_tax_silva.dna.arc_bac.shortid.fasta.mmi
-<install>/ref/SILVA_138.2_SSURef_tax_silva.dna.euk.shortid.fasta
-<install>/ref/SILVA_138.2_SSURef_tax_silva.dna.euk.shortid.fasta.mmi
+<install>/ref/SILVA_138.2_SSURef_NR99_tax_silva.dna.arc_bac.shortid.fasta
+<install>/ref/SILVA_138.2_SSURef_NR99_tax_silva.dna.arc_bac.shortid.fasta.mmi
+<install>/ref/SILVA_138.2_SSURef_NR99_tax_silva.dna.euk.shortid.fasta
+<install>/ref/SILVA_138.2_SSURef_NR99_tax_silva.dna.euk.shortid.fasta.mmi
 <install>/ref/UNITE_public_19.02.2025.shortid.fasta
 <install>/ref/UNITE_public_19.02.2025.shortid.fasta.mmi
 <install>/ref/ref_taxonomy.tsv
@@ -70,9 +70,29 @@ Default files expected by `meta_marker_count`:
 Download SILVA SSU directly:
 
 ```bash
-curl -L \
-  -o SILVA_138.2_SSURef_tax_silva.fasta.gz \
-  "https://www.arb-silva.de/fileadmin/silva_databases/current/Exports/SILVA_138.2_SSURef_tax_silva.fasta.gz"
+aria2c \
+  -c \
+  -x 16 \
+  -s 16 \
+  -k 1M \
+  --file-allocation=none \
+  -o SILVA_138.2_SSURef_NR99_tax_silva.fasta.gz \
+  "https://www.arb-silva.de/fileadmin/silva_databases/current/Exports/SILVA_138.2_SSURef_NR99_tax_silva.fasta.gz"
+
+gzip -t SILVA_138.2_SSURef_NR99_tax_silva.fasta.gz
+
+zcat SILVA_138.2_SSURef_NR99_tax_silva.fasta.gz \
+  | awk '
+      /^>/ {print; next}
+      {
+        gsub(/U/, "T")
+        gsub(/u/, "t")
+        print
+      }
+    ' \
+  | gzip -c > SILVA_138.2_SSURef_NR99_tax_silva.fasta.gz
+
+rm  SILVA_138.2_SSURef_NR99_tax_silva.fasta.gz
 ```
 
 Download UNITE ITS from the repository page:
@@ -93,7 +113,7 @@ Run this once after downloading the raw reference files:
 
 ```bash
 meta_marker_build_refs \
-  --silva SILVA_138.2_SSURef_tax_silva.fasta.gz \
+  --silva SILVA_138.2_SSURef_NR99_tax_silva.fasta.gz \
   --unite UNITE_public_19.02.2025.fasta.gz \
   --force
 ```
@@ -104,7 +124,7 @@ If minimap2 indexes should be created later, use:
 
 ```bash
 meta_marker_build_refs \
-  --silva SILVA_138.2_SSURef_tax_silva.fasta.gz \
+  --silva SILVA_138.2_SSURef_NR99_tax_silva.fasta.gz \
   --unite UNITE_public_19.02.2025.fasta.gz \
   --skip-index \
   --force
@@ -115,11 +135,11 @@ Then build indexes manually:
 ```bash
 REF_DIR="${META_MARKER_COUNT_REF_DIR:-$HOME/.local/share/meta_marker_count/ref}"
 
-minimap2 -d "$REF_DIR/SILVA_138.2_SSURef_tax_silva.dna.arc_bac.shortid.fasta.mmi" \
-  "$REF_DIR/SILVA_138.2_SSURef_tax_silva.dna.arc_bac.shortid.fasta"
+minimap2 -d "$REF_DIR/SILVA_138.2_SSURef_NR99_tax_silva.dna.arc_bac.shortid.fasta.mmi" \
+  "$REF_DIR/SILVA_138.2_SSURef_NR99_tax_silva.dna.arc_bac.shortid.fasta"
 
-minimap2 -d "$REF_DIR/SILVA_138.2_SSURef_tax_silva.dna.euk.shortid.fasta.mmi" \
-  "$REF_DIR/SILVA_138.2_SSURef_tax_silva.dna.euk.shortid.fasta"
+minimap2 -d "$REF_DIR/SILVA_138.2_SSURef_NR99_tax_silva.dna.euk.shortid.fasta.mmi" \
+  "$REF_DIR/SILVA_138.2_SSURef_NR99_tax_silva.dna.euk.shortid.fasta"
 
 minimap2 -d "$REF_DIR/UNITE_public_19.02.2025.shortid.fasta.mmi" \
   "$REF_DIR/UNITE_public_19.02.2025.shortid.fasta"
@@ -130,10 +150,10 @@ Generated reference files:
 ```text
 UNITE_public_19.02.2025.shortid.fasta
 UNITE_public_19.02.2025.taxonomy.tsv
-SILVA_138.2_SSURef_tax_silva.dna.arc_bac.shortid.fasta
-SILVA_138.2_SSURef_tax_silva.dna.arc_bac.taxonomy.tsv
-SILVA_138.2_SSURef_tax_silva.dna.euk.shortid.fasta
-SILVA_138.2_SSURef_tax_silva.dna.euk.taxonomy.tsv
+SILVA_138.2_SSURef_NR99_tax_silva.dna.arc_bac.shortid.fasta
+SILVA_138.2_SSURef_NR99_tax_silva.dna.arc_bac.taxonomy.tsv
+SILVA_138.2_SSURef_NR99_tax_silva.dna.euk.shortid.fasta
+SILVA_138.2_SSURef_NR99_tax_silva.dna.euk.taxonomy.tsv
 ref_taxonomy.tsv
 ```
 
