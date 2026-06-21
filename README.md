@@ -6,10 +6,6 @@
 </p>
 
 <p align="center">
-  <img src="workflow.png" alt="meta_marker_count workflow" width="920">
-</p>
-
-<p align="center">
   <a href="#installation">Installation</a> ·
   <a href="#reference-database">Reference database</a> ·
   <a href="#input-format">Input format</a> ·
@@ -74,8 +70,6 @@ meta_marker_count/
 │   ├── taxa_time_rank_spacetime.R
 │   └── disturbance_event_response.R
 ├── refs/                             # generated reference FASTA/index/taxonomy files
-├── docs/
-│   └── meta_marker_count_workflow.svg
 ├── Makefile
 ├── README.md
 └── LICENSE
@@ -849,7 +843,7 @@ Use the current flat output paths. The pipeline writes long tables, not sample-b
 `long-table` = "marker_count_out/all.marker_rpm.genus.long.tsv"
 ```
 
-Some external analyses may require their own input conversion. This pipeline does not write matrix files. Do not use the old nested path `marker_count_out/04_abundance/...`.
+Some external analyses may require their own input conversion. This pipeline does not write matrix files.
 
 ---
 

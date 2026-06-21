@@ -15,7 +15,7 @@ Workflow
 Design notes
 ------------
 - External align/extract tools are still BBDuk and minimap2.
-- Shell/awk abundance parsing is removed; Polars is the only abundance engine.
+- Polars is the abundance engine.
 - Abundance is parallelized at sample level, while extract/align are scheduled at sample-marker level.
 - R1/R2 are streamed into one paired minimap2 process per sample-marker task.
   Query names are normalized to /1 and /2 mate suffixes so minimap2 keeps PE pairing.

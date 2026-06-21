@@ -1,8 +1,10 @@
 .DS_Store
 *.log
 *.tmp
-*.pyc
 __pycache__/
+*.py[cod]
+.pytest_cache/
+
 .agents/
 .codex/
 
@@ -11,11 +13,17 @@ __pycache__/
 .env
 .meta_marker_count_ref_dir
 
+# R session files
+.Rhistory
+.RData
+Rplots.pdf
+
 # Pipeline outputs
 marker_count_out/
 analysis_out/
 
 # Large downloaded/generated references
+raw_refs/
 ref/
 refs/
 *.mmi
