@@ -187,6 +187,7 @@ python3 -m compileall metamarker_profile
 
 | Tool | Purpose |
 |---|---|
+| `miniasm` | assemble lineage-extracted `merged_segments.fq.gz` from minimap2 all-vs-all overlaps |
 | `Rscript` | syntax checks for R analysis templates |
 | `mamba` / `conda` | environment management |
 | `aria2c` | faster reference download |
@@ -195,7 +196,7 @@ python3 -m compileall metamarker_profile
 
 ```bash
 mamba create -n metamarker_profile -c conda-forge -c bioconda \
-  python polars rich rich-argparse seqkit minimap2 bbmap \
+  python polars rich rich-argparse seqkit minimap2 miniasm bbmap \
   r-base r-ggplot2 r-vegan r-igraph
 
 mamba activate metamarker_profile
@@ -548,7 +549,9 @@ python3 scripts/extract_lineage_reads_assemble.py \
   --rank genus \
   --lineage "Targetus" \
   --markers 16S \
-  --assembler olc
+  --jobs 8 \
+  --assembler miniasm \
+  --assembly-threads 8
 ```
 
 The script reuses the same PAF filters and R1/R2 arbitration rules as the abundance step. In default `--mode assigned`, reads are selected from pairs assigned to the requested lineage after pair arbitration. This matches the abundance table: single-end reads are retained, and discordant R1/R2 pairs follow the better mate. For a stricter annotation check, use `--mode mate-hit` to keep only mates whose own best hit matches the lineage.
@@ -561,22 +564,28 @@ lineage_extract/<rank>_<lineage>/
 ├── reads.R2.fq.gz
 ├── merged_segments.fq.gz
 ├── merged_segments.fa
-├── olc_contigs.fa
-├── olc_contigs.fq.gz
-├── olc_summary.tsv
+├── miniasm.overlaps.paf
+├── miniasm.gfa
+├── miniasm_contigs.fa
+├── assembly_summary.tsv
 ├── selected_reads.tsv
-└── summary.tsv
+├── summary.tsv
+├── run_status.tsv
+└── extract_lineage_reads_assemble.log
 ```
 
-`merged_segments.fq.gz` is the required OLC input. It contains the selected R1/R2 read pool, oriented by the best PAF strand before assembly. The built-in `--assembler olc` path is pure Python and does not call external programs. It greedily merges suffix-prefix overlaps and writes assembled marker contigs to `olc_contigs.fa`.
+`merged_segments.fq.gz` is the required assembly input. It contains the selected R1/R2 read pool, oriented by the best PAF strand before assembly. With `--assembler miniasm`, the script runs `minimap2` all-vs-all overlap search on `merged_segments.fq.gz`, sends the resulting PAF to `miniasm`, and exports GFA segments to `miniasm_contigs.fa`.
 
-You can also run OLC directly on an existing merged segments file:
+The script uses Rich help, colored run logs, progress bars, parallel PAF parsing with `--jobs`, and minimap2 threading with `--assembly-threads`. Resume is enabled by default: a stage is skipped only when the run log contains its completion marker and the expected output files exist. Use `--force` to recompute, `--no-resume` to disable checkpoint checks, `--help_input` for exact input format requirements, and `--help_default` for default parameters.
+
+You can also assemble an existing merged segments file directly:
 
 ```bash
 python3 scripts/extract_lineage_reads_assemble.py \
   --segments-fastq metamarker_profile_out/lineage_extract/genus_Targetus/merged_segments.fq.gz \
-  --olc-min-overlap 40 \
-  --olc-min-identity 0.98
+  --assembler miniasm \
+  --overlap-preset ava-ont \
+  --miniasm-opts "-m 40 -s 40"
 ```
 
 ---
